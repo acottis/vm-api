@@ -1,8 +1,12 @@
+//! This is our web server that advertises our routes
+
 use actix_web::{web, App, HttpServer, Responder};
 use serde::Deserialize;
 use std::process::Command;
 
+/// IP Address Constant, 0.0.0.0 for all IP's
 const IP_ADDR: &'static str = "0.0.0.0";
+/// PORT Constant that the website will be hosted on
 const PORT: &'static str = "8080";
 
 /// Information used to create a new virtual machine in Hyper-V 
@@ -10,6 +14,52 @@ const PORT: &'static str = "8080";
 struct VirtualMachine{
     hostname:   Option<String>,
     cpus:       Option<u8>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct VmStatus{
+    name: String,
+    state: VirtualMachineState,
+    id: String,
+    #[serde(rename = "CPUUsage")]
+    cpu_usage: u8,
+    memory_assigned: u32,
+    status: String,
+    processor_count: u8,
+}
+
+#[derive(Debug, Deserialize)]
+enum VirtualMachineState{
+    Other,
+    Running,
+    Off,
+    Stopping,
+    Saved,
+    Paused,
+    Starting,
+    Reset,
+    Saving,
+    Pausing,
+    Resuming,
+    FastSaved,
+    FastSaving,
+    ForceShutdown,
+    ForceReboot,
+    Hibernated,
+    ComponentServicing,
+    RunningCritical,
+    OffCritical,
+    StoppingCritical,
+    SavedCritical,
+    PausedCritical,
+    StartingCritical,
+    ResetCritical,
+    SavingCritical,
+    PausingCritical,
+    ResumingCritical,
+    FastSavedCritical,
+    FastSavingCritical,
 }
 
 /// This is our handler for creating new VM's in hyper-v
@@ -25,7 +75,11 @@ async fn status(vm: web::Query<VirtualMachine>) -> impl Responder {
                 .arg(format!("{}", hn))
                 .output().expect("Didnt get result");
             match out.status.success() {
-                true => format!("{:?}",out),
+                true => {
+                    let vm_status: VmStatus = serde_json::from_slice(&out.stdout).unwrap();
+                    println!("{:?}", &vm_status);
+                    format!("{:?}", &vm_status)
+                },
                 false => format!("{:?}",out),
             }
         },

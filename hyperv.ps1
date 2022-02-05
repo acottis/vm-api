@@ -11,6 +11,7 @@ $vms = Invoke-Command `
 $out = $vms | Where-Object VMName -eq $vmname | `
 Select-Object Name, Id, CPUUsage, MemoryAssigned, Uptime, Status, State, ProcessorCount | ConvertTo-JSON -Compress
 
+
 if ($out){
 	Write-Output $out
 	exit 0

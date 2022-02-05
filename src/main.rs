@@ -1,74 +1,22 @@
 //! This is our web server that advertises our routes
 
 use actix_web::{web, App, HttpServer, Responder};
-use serde::Deserialize;
 use std::process::Command;
+
+mod hyperv;
 
 /// IP Address Constant, 0.0.0.0 for all IP's
 const IP_ADDR: &'static str = "0.0.0.0";
 /// PORT Constant that the website will be hosted on
 const PORT: &'static str = "8080";
 
-/// Information used to create a new virtual machine in Hyper-V 
-#[derive(Debug,Deserialize)]
-struct VirtualMachine{
-    hostname:   Option<String>,
-    cpus:       Option<u8>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct VmStatus{
-    name: String,
-    state: VirtualMachineState,
-    id: String,
-    #[serde(rename = "CPUUsage")]
-    cpu_usage: u8,
-    memory_assigned: u32,
-    status: String,
-    processor_count: u8,
-}
-
-#[derive(Debug, Deserialize)]
-enum VirtualMachineState{
-    Other,
-    Running,
-    Off,
-    Stopping,
-    Saved,
-    Paused,
-    Starting,
-    Reset,
-    Saving,
-    Pausing,
-    Resuming,
-    FastSaved,
-    FastSaving,
-    ForceShutdown,
-    ForceReboot,
-    Hibernated,
-    ComponentServicing,
-    RunningCritical,
-    OffCritical,
-    StoppingCritical,
-    SavedCritical,
-    PausedCritical,
-    StartingCritical,
-    ResetCritical,
-    SavingCritical,
-    PausingCritical,
-    ResumingCritical,
-    FastSavedCritical,
-    FastSavingCritical,
-}
-
 /// This is our handler for creating new VM's in hyper-v
-async fn new(vm: web::Json<VirtualMachine>) -> impl Responder {  
+async fn new(vm: web::Json<hyperv::VirtualMachine>) -> impl Responder {  
     format!("Creating VM with Hostname: {:?} and {:?} cores", vm.hostname, vm.cpus)
 }
 
 /// This our handler for viewing the status
-async fn status(vm: web::Query<VirtualMachine>) -> impl Responder {
+async fn status(vm: web::Query<hyperv::VirtualMachine>) -> impl Responder {
     match &vm.hostname{
         Some(hn) => {
             let out = Command::new("./hyperv.ps1")
@@ -76,7 +24,7 @@ async fn status(vm: web::Query<VirtualMachine>) -> impl Responder {
                 .output().expect("Didnt get result");
             match out.status.success() {
                 true => {
-                    let vm_status: VmStatus = serde_json::from_slice(&out.stdout).unwrap();
+                    let vm_status: hyperv::VmStatus = serde_json::from_slice(&out.stdout).unwrap();
                     println!("{:?}", &vm_status);
                     format!("{:?}", &vm_status)
                 },
@@ -99,15 +47,15 @@ async fn default_response() -> impl Responder {
 async fn main() -> std::io::Result<()> {
     println!("Hello, world!");
 
-HttpServer::new(|| 
-    App::new().service(
-        web::scope("/api/v0") 
-            .route("new", web::post().to(new))
-            .route("status", web::get().to(status))
+    HttpServer::new(|| 
+        App::new().service(
+            web::scope("/api/v0") 
+                .route("new", web::post().to(new))
+                .route("status", web::get().to(status))
+            )
+            .default_service(web::get().to(default_response))
         )
-        .default_service(web::get().to(default_response))
-    )
-    .bind(format!("{}:{}", IP_ADDR, PORT))?
-    .run()
-    .await
+        .bind(format!("{}:{}", IP_ADDR, PORT))?
+        .run()
+        .await
 }

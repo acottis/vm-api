@@ -1,13 +1,32 @@
 //! This contains logic and types for Hyper-V
 //!
-
 use serde::Deserialize;
 
 /// Information used to create a new virtual machine in Hyper-V 
 #[derive(Debug,Deserialize)]
-pub struct VirtualMachine{
+pub struct Vm{
+    // Direct to Hyper-V
     pub hostname:   Option<String>,
     pub cpus:       Option<u8>,
+    generation:     Option<Generation>,
+    // Variables handled by me
+    network:        Option<String>,
+    os_version:     Option<Os>,
+
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+enum Os {
+    Win2022StandardCore,
+    Win2022StandardDesktop,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+enum Generation {
+    Gen1,
+    Gen2,
 }
 
 /// This is the information we return to the user about the VM
@@ -16,7 +35,7 @@ pub struct VirtualMachine{
 #[serde(rename_all = "PascalCase")]
 pub struct VmStatus{
     name: String,
-    state: VirtualMachineState,
+    state: VmState,
     id: String,
     #[serde(rename = "CPUUsage")]
     cpu_usage: u8,
@@ -48,7 +67,7 @@ struct Timespan{
 /// Enum from `[System.Enum]::GetValues([Microsoft.HyperV.PowerShell.VMState])`
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
-enum VirtualMachineState{
+enum VmState{
     Other,
     Running,
     Off,

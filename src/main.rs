@@ -21,9 +21,8 @@ async fn new(vm: web::Json<hyperv::Vm>) -> impl Responder {
                     ["-Command", "Invoke-Command", "-Hostname", 
                     "bot@bestpcgargunnock", "-Command", 
                     &format!("{{ {DEPLOYSCRIPTPATH} -Hostname {hn} }}")]
-                )
-             .output().expect("Failed create new VM");
-             match out.status.success() {
+                ).output().expect("Failed create new VM");
+            match out.status.success() {
                 true => {
                     println!("{:?}", out);
                     let vm_status: hyperv::VmStatus
